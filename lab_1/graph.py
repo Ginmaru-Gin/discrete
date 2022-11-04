@@ -1,6 +1,6 @@
-import itertools
 import math
 import numpy as np
+from termcolor import colored
 
 
 class Graph:
@@ -28,27 +28,16 @@ class Graph:
         return np.array([u for u in range(self._vert_count) if self.edge(v, u) != math.inf])
 
     def dijkstra(self, v: int) -> np.ndarray:
-        result = np.full(self._vert_count, math.inf)
+        result = self._matrix[v]
         remaining = np.array(range(self._vert_count))
 
-        result[v] = 0
         remaining = np.delete(remaining, np.where(remaining == v))
 
-        for u in self.incidents(v):
-            result[u] = self.edge(v, u)
-
         while remaining.size > 0:
-            # TODO improve this search
-            v = remaining[0]
-            w = result[v]
-            for i in remaining:
-                if result[i] < w:
-                    v = i
-                    w = result[i]
-
+            v = remaining[result[remaining].argmin()]
             remaining = np.delete(remaining, np.where(remaining == v))
-            for u in self.incidents(v):
-                result[u] = min(result[u], result[v] + self.edge(v, u))
+            tmp = self._matrix[v] + result[v]
+            np.putmask(result, tmp < result, tmp)
 
         return result
 
@@ -56,32 +45,24 @@ class Graph:
         result = np.full(self._vert_count, math.inf)
         result[v] = 0
 
-        vertices = range(self._vert_count)
         for _ in range(self._vert_count):
-            done = True
-            for u, w in itertools.product(vertices, vertices):
-                tmp = result[w]
-                result[w] = min(result[w], result[u] + self.edge(u, w))
-                if tmp != result[w]:
-                    done = False
-            if done:
+            tmp = self._matrix + np.repeat(result, self._vert_count).reshape(self._vert_count, self._vert_count)
+            old_result = result.copy()
+            for u in range(self._vert_count):
+                np.putmask(result, tmp[u] < result, tmp[u])
+            if np.all(old_result == result):
                 break
         else:
-            print('[FORD-BELLMAN]: Graph has negative weights!')
+            print(colored('[FORD-BELLMAN]: Graph has negative weights!', 'red'))
 
         return result
 
     def floyd_warshall(self) -> np.ndarray:
-        vertices = range(self._vert_count)
-        result = np.full((self._vert_count, self._vert_count), math.inf)
-        for i in vertices:
-            for j in self.incidents(i):
-                result[i, j] = self._matrix[i, j]
+        result = self._matrix.copy()
 
-        tmp = result
-        for k in vertices:
-            result, tmp = tmp, result
-            for i, j in itertools.product(vertices, vertices):
-                result[i, j] = min(tmp[i, j], tmp[i, k] + tmp[k, j])
+        for k in range(self._vert_count):
+            tmp = np.tile(result[k], self._vert_count).reshape(self._vert_count, self._vert_count) + \
+                    np.repeat(result[:, k], self._vert_count).reshape(self._vert_count, self._vert_count)
+            np.putmask(result, tmp < result, tmp)
 
         return result

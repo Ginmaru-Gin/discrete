@@ -1,11 +1,14 @@
 from graph import Graph
+
 import numpy as np
 from scipy.sparse.csgraph import dijkstra, floyd_warshall
 from termcolor import colored
+from time import time
 
 
 def test(filename: str, depth: int = 100):
-    passed = lambda: print(colored('PASSED', 'green'))
+    exec_time: float
+    passed = lambda: print(colored('PASSED ' + str(exec_time), 'green'))
     not_passed = lambda: print(colored('NOT PASSED', 'red'))
     print('TEST: ', filename)
 
@@ -21,26 +24,32 @@ def test(filename: str, depth: int = 100):
             check[v] = dijkstra(g.get_matrix(), indices=v)
 
         print('DIJKSTRA:')
+        exec_time = time()
         for v in vertices:
             if np.array_equal(check[v], g.dijkstra(v)) is False:
                 not_passed()
                 break
         else:
+            exec_time = time() - exec_time
             passed()
 
         print('FORD-BELLMAN:')
+        exec_time = time()
         for v in vertices:
             if np.array_equal(check[v], g.ford_bellman(v)) is False:
                 not_passed()
                 break
         else:
+            exec_time = time() - exec_time
             passed()
 
         check = floyd_warshall(g.get_matrix())
         print('FLOYD-WARSHALL:')
+        exec_time = time()
         if np.array_equal(check, g.floyd_warshall()) is False:
             not_passed()
         else:
+            exec_time = time() - exec_time
             passed()
 
     print()
@@ -57,3 +66,12 @@ if __name__ == '__main__':
     ]
     for file in test_files:
         test(file, 10)
+        pass
+
+    g = Graph('test3.txt')
+    print('TEST FROD-BELLMAN FOR TEST_3 WITH NEGATIVE VALUES\n')
+    for i in range(g.size()):
+        t = time()
+        g.ford_bellman(i)
+        t = time() - t
+        print('FORD-BELLMAN', t)
